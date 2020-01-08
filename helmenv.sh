@@ -122,7 +122,7 @@ function helmenv_install(){
             actual_version="$(basename "$(readlink -f "$HELM_BINARY_PATH/helm")")"
         fi
         echo "helm is pointing to the ${actual_version//helm-} version"
-        echo "Do you want to overwrite it? (y/[n])"
+        echo "Do you want to overwrite it? (y/[N])"
         read -r overwrite
         if [[ "${overwrite,,}" == "y"* ]]; then
             helmenv_use "$VERSION"
@@ -159,13 +159,17 @@ function helmenv_uninstall(){
 
 function helmenv_list(){
     # Check to see if we have an activated version of helm managed by helmenv
-    if [[ "$(command -v helm)" ]] && [[ "$(command -v helm)" == "${HELM_BINARY_PATH}"* ]]; then
-        if [[ "$HELM_OS_ARCH" == "darwin"* ]]; then
-            activated_version="$(greadlink -f $(command -v helm) | grep -Eo 'v([0-9]\.?)+$')"
+    if [[ "$(command -v helm)" ]]; then
+        if [[ "$(command -v helm)" == "${HELM_BINARY_PATH}"* ]]; then
+            if [[ "$HELM_OS_ARCH" == "darwin"* ]]; then
+                activated_version="$(greadlink -f $(command -v helm) | grep -Eo 'v([0-9]\.?)+$')"
+            else
+                activated_version="$(readlink -f $(command -v helm) | grep -Eo 'v([0-9]\.?)+$')"
+            fi
         else
-            activated_version="$(readlink -f $(command -v helm) | grep -Eo 'v([0-9]\.?)+$')"
+            activated_version="$(helm version -c | awk -F 'SemVer:"' '{ print $2 }' | awk -F '"' '{ print $1 }') (not managed by helmenv)"
         fi
-        echo "Activated version: $activated_version" && echo
+        echo "Active version: $activated_version" && echo
     fi
     find "${HELM_BINARY_PATH}"/ -name '*helm-*' -exec basename {} \; | grep -Eo 'v([0-9]\.?)+$' | sort --version-sort
 }
